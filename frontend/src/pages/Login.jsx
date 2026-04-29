@@ -27,9 +27,9 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: '#fff' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', background: '#fff', fontFamily: "'DM Sans', sans-serif" }}>
 
-      {/* Left panel — red SESI brand */}
+      {/* Painel esquerdo — vermelho SESI */}
       <div style={{
         width: '42%',
         background: '#E30613',
@@ -40,40 +40,20 @@ export default function Login() {
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Decorative circles */}
-        <div style={{
-          position: 'absolute', width: 400, height: 400,
-          borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)',
-          top: -120, right: -120,
-        }} />
-        <div style={{
-          position: 'absolute', width: 280, height: 280,
-          borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)',
-          bottom: 60, left: -80,
-        }} />
-        <div style={{
-          position: 'absolute', width: 160, height: 160,
-          borderRadius: '50%', background: 'rgba(255,255,255,0.05)',
-          bottom: 200, right: 40,
-        }} />
+        {/* Círculos decorativos */}
+        <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', top: -120, right: -120, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', width: 280, height: 280, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)', bottom: 60, left: -80, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', bottom: 200, right: 40, pointerEvents: 'none' }} />
 
         {/* Logo */}
-        <div>
-          <img
-            src="https://www.sesisp.org.br/images/Logo-SESI-SP.svg"
-            alt="SESI SP"
-            style={{ height: 36, filter: 'brightness(0) invert(1)', display: 'block' }}
-            onError={e => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'block';
-            }}
-          />
-          <div style={{ display: 'none', fontFamily: 'Syne', fontWeight: 900, fontSize: 28, color: '#fff', letterSpacing: '-0.02em' }}>
-            SESI
-          </div>
-        </div>
+        <img
+          src="https://www.sesisp.org.br/images/Logo-SESI-SP.svg"
+          alt="SESI SP"
+          style={{ height: 34, objectFit: 'contain', display: 'block', filter: 'brightness(0) invert(1)' }}
+          onError={e => { e.target.style.display = 'none'; }}
+        />
 
-        {/* Main text */}
+        {/* Texto central */}
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{
             display: 'inline-block',
@@ -82,13 +62,13 @@ export default function Login() {
             padding: '4px 12px',
             marginBottom: 20,
           }}>
-            <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'DM Sans', sans-serif" }}>
               SGES
             </span>
           </div>
           <h1 style={{
-            fontFamily: 'Syne',
-            fontSize: 36,
+            fontFamily: "'Syne', sans-serif",
+            fontSize: 34,
             fontWeight: 800,
             color: '#fff',
             lineHeight: 1.15,
@@ -96,18 +76,18 @@ export default function Login() {
           }}>
             Sistema de Gestão de Equipamentos
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, lineHeight: 1.6, maxWidth: 300 }}>
-            Controle de retirada e devolução de equipamentos com registro em tempo real.
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, lineHeight: 1.6, maxWidth: 300, fontFamily: "'DM Sans', sans-serif" }}>
+            Controle de retirada e devolução com registro em tempo real.
           </p>
         </div>
 
-        {/* Bottom tag */}
-        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
+        {/* Rodapé */}
+        <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontFamily: "'DM Sans', sans-serif" }}>
           SESI — Serviço Social da Indústria
         </div>
       </div>
 
-      {/* Right panel — login form */}
+      {/* Painel direito — formulário */}
       <div style={{
         flex: 1,
         display: 'flex',
@@ -116,9 +96,9 @@ export default function Login() {
         padding: '48px',
         background: '#FAFAFA',
       }}>
-        <div style={{ width: '100%', maxWidth: 380 }}>
-          <div style={{ marginBottom: 40 }}>
-            <h2 style={{ fontFamily: 'Syne', fontSize: 26, fontWeight: 800, color: '#111', marginBottom: 6 }}>
+        <div style={{ width: '100%', maxWidth: 360 }}>
+          <div style={{ marginBottom: 36 }}>
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, color: '#111', marginBottom: 6 }}>
               Bem-vindo
             </h2>
             <p style={{ color: '#888', fontSize: 14 }}>
@@ -126,39 +106,33 @@ export default function Login() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <div className="form-group">
-              <label>E-mail</label>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#555' }}>E-mail</label>
               <div style={{ position: 'relative' }}>
-                <Mail size={15} style={{
-                  position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
-                  color: '#bbb', pointerEvents: 'none',
-                }} />
+                <Mail size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#bbb', pointerEvents: 'none' }} />
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   required
-                  style={{ paddingLeft: 38, background: '#fff' }}
+                  style={{ paddingLeft: 38, background: '#fff', width: '100%', padding: '10px 14px 10px 38px', border: '1.5px solid #ddd', borderRadius: 7, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: 'none', color: '#111' }}
                 />
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Senha</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#555' }}>Senha</label>
               <div style={{ position: 'relative' }}>
-                <Lock size={15} style={{
-                  position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
-                  color: '#bbb', pointerEvents: 'none',
-                }} />
+                <Lock size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#bbb', pointerEvents: 'none' }} />
                 <input
                   type="password"
                   value={senha}
                   onChange={e => setSenha(e.target.value)}
                   placeholder="••••••••"
                   required
-                  style={{ paddingLeft: 38, background: '#fff' }}
+                  style={{ paddingLeft: 38, background: '#fff', width: '100%', padding: '10px 14px 10px 38px', border: '1.5px solid #ddd', borderRadius: 7, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: 'none', color: '#111' }}
                 />
               </div>
             </div>
@@ -167,7 +141,7 @@ export default function Login() {
               type="submit"
               disabled={loading}
               style={{
-                marginTop: 6,
+                marginTop: 8,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -179,14 +153,14 @@ export default function Login() {
                 borderRadius: 8,
                 fontSize: 15,
                 fontWeight: 700,
-                fontFamily: 'Syne',
+                fontFamily: "'Syne', sans-serif",
                 cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s',
-                boxShadow: loading ? 'none' : '0 3px 12px rgba(227,6,19,0.3)',
+                boxShadow: loading ? 'none' : '0 3px 12px rgba(227,6,19,0.28)',
                 letterSpacing: '0.02em',
+                transition: 'all 0.15s',
               }}
             >
-              {loading ? 'Entrando...' : <>Entrar <ArrowRight size={16} /></>}
+              {loading ? 'Entrando...' : <><span>Entrar</span><ArrowRight size={16} /></>}
             </button>
           </form>
         </div>
