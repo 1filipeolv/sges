@@ -1,345 +1,161 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../api';
+import { useEffect, useState } from 'react';
+import { api } from '../api';
+import { Package, AlertTriangle, ArrowUpFromLine, CheckCircle, Clock } from 'lucide-react';
+
+function StatCard({ icon: Icon, label, value, color, bg }) {
+  return (
+    <div style={{
+      background: '#fff',
+      border: '1px solid #EBEBEB',
+      borderRadius: 10,
+      padding: '20px 24px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 16,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    }}>
+      <div style={{
+        width: 46, height: 46,
+        borderRadius: 10,
+        background: bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <Icon size={20} style={{ color }} />
+      </div>
+      <div>
+        <div style={{ fontSize: 28, fontFamily: 'Syne', fontWeight: 800, color: '#111', lineHeight: 1 }}>
+          {value ?? '—'}
+        </div>
+        <div style={{ fontSize: 12.5, color: '#888', marginTop: 4 }}>{label}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
-  const [recentMovs, setRecentMovs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [abertos, setAbertos] = useState([]);
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    api('/movimentacoes/stats').then(setStats).catch(() => {});
+    api('/movimentacoes/abertos').then(setAbertos).catch(() => {});
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [statsRes, movsRes] = await Promise.all([
-        api.get('/movimentacoes/stats').catch(() => ({ data: {} })),
-        api.get('/movimentacoes?limit=5').catch(() => ({ data: [] })),
-      ]);
-      setStats(statsRes.data);
-      setRecentMovs(Array.isArray(movsRes.data) ? movsRes.data.slice(0, 5) : []);
-    } catch {
-      // keep state
-    } finally {
-      setLoading(false);
-    }
+  const formatDate = (d) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
 
-  const s = stats || {};
+  const horasAtras = (d) => {
+    const h = Math.floor((Date.now() - new Date(d)) / 3600000);
+    if (h < 1) return 'Agora';
+    if (h === 1) return '1h atrás';
+    return `${h}h atrás`;
+  };
 
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 32, fontWeight: 800,
-          textTransform: 'uppercase',
-          letterSpacing: '-0.01em',
-          color: '#0D0D0D',
-          lineHeight: 1,
-        }}>Dashboard</div>
-        <div style={{ fontSize: 14, color: '#878787', marginTop: 4 }}>
-          Visão geral do sistema — {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-        </div>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800 }}>Dashboard</h1>
+        <p style={{ color: '#888', fontSize: 14, marginTop: 4 }}>
+          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-        gap: 16,
-        marginBottom: 28,
-      }}>
-        <KpiCard
-          label="Equipamentos em uso"
-          value={loading ? '–' : (s.equipamentos_em_uso ?? 0)}
-          icon="📤"
-          accent="#E30613"
-          trend={s.equipamentos_em_uso > 0 ? 'active' : null}
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14, marginBottom: 28 }}>
+        <StatCard
+          icon={CheckCircle} label="Disponíveis"
+          value={stats ? stats.total_equipamentos - stats.equipamentos_fora : null}
+          color="#1A9E5C" bg="rgba(26,158,92,0.1)"
         />
-        <KpiCard
-          label="Disponíveis"
-          value={loading ? '–' : (s.equipamentos_disponiveis ?? 0)}
-          icon="✅"
-          accent="#22C55E"
+        <StatCard
+          icon={ArrowUpFromLine} label="Equipamentos fora"
+          value={stats?.equipamentos_fora}
+          color="#E30613" bg="rgba(227,6,19,0.08)"
         />
-        <KpiCard
-          label="Total de equipamentos"
-          value={loading ? '–' : (s.total_equipamentos ?? 0)}
-          icon="💻"
-          accent="#3B82F6"
+        <StatCard
+          icon={Package} label="Total cadastrado"
+          value={stats?.total_equipamentos}
+          color="#555" bg="#F2F2F2"
         />
-        <KpiCard
-          label="Retiradas hoje"
-          value={loading ? '–' : (s.retiradas_hoje ?? 0)}
-          icon="📊"
-          accent="#F59E0B"
-        />
-        <KpiCard
-          label="Total de pessoas"
-          value={loading ? '–' : (s.total_pessoas ?? 0)}
-          icon="👥"
-          accent="#8B5CF6"
-        />
-        <KpiCard
-          label="Movimentações (mês)"
-          value={loading ? '–' : (s.movimentacoes_mes ?? 0)}
-          icon="📈"
-          accent="#0D0D0D"
+        <StatCard
+          icon={AlertTriangle} label="Possíveis atrasos (+8h)"
+          value={stats?.possiveis_atrasos}
+          color="#D97700" bg="rgba(217,119,0,0.1)"
         />
       </div>
 
-      {/* Bottom grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 20 }}>
-
-        {/* Recent activity */}
+      {/* Tabela de abertos */}
+      <div style={{ background: '#fff', border: '1px solid #EBEBEB', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div style={{
-          background: 'white',
-          borderRadius: 14,
-          border: '1px solid #E8E8E8',
-          overflow: 'hidden',
+          padding: '18px 24px 14px',
+          borderBottom: '1px solid #EBEBEB',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <div style={{
-            padding: '20px 24px',
-            borderBottom: '1px solid #F4F4F4',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <div>
-              <div style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
-                fontSize: 16, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}>Atividade Recente</div>
-              <div style={{ fontSize: 12, color: '#878787', marginTop: 1 }}>Últimas movimentações</div>
-            </div>
-            <Link to="/historico" style={{
-              fontSize: 12, fontWeight: 700, color: '#E30613',
-              textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.06em',
-            }}>Ver todas →</Link>
+          <div>
+            <h2 style={{ fontSize: 16, fontWeight: 700 }}>Equipamentos fora agora</h2>
+            <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Retiradas em aberto</p>
           </div>
-
-          {loading ? (
-            <div style={{ padding: 40, textAlign: 'center' }}>
-              <div style={{
-                width: 24, height: 24, border: '2px solid #E8E8E8',
-                borderTopColor: '#E30613', borderRadius: '50%',
-                animation: 'spin 0.7s linear infinite', margin: '0 auto',
-              }} />
-            </div>
-          ) : recentMovs.length === 0 ? (
-            <div style={{ padding: 60, textAlign: 'center', color: '#878787' }}>
-              <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.3 }}>📋</div>
-              <div style={{ fontWeight: 600, color: '#3A3A3A', marginBottom: 4 }}>Nenhuma movimentação</div>
-              <div style={{ fontSize: 13 }}>As movimentações aparecerão aqui</div>
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <thead>
-                <tr style={{ background: '#FAFAFA' }}>
-                  {['Equipamento', 'Pessoa', 'Tipo', 'Data/Hora'].map(h => (
-                    <th key={h} style={{
-                      padding: '10px 16px', textAlign: 'left',
-                      fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-                      letterSpacing: '0.06em', color: '#878787',
-                      borderBottom: '1px solid #F4F4F4',
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recentMovs.map((m, i) => (
-                  <tr key={m.id || i} style={{ borderBottom: '1px solid #F9F9F9' }}>
-                    <td style={{ padding: '14px 16px', fontWeight: 600 }}>{m.equipamento_nome || m.patrimonio || '–'}</td>
-                    <td style={{ padding: '14px 16px', color: '#3A3A3A' }}>{m.pessoa_nome || '–'}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '3px 10px', borderRadius: 99,
-                        fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-                        letterSpacing: '0.06em',
-                        background: m.tipo === 'retirada' || !m.data_devolucao_real
-                          ? '#FEE8E8' : '#E8F8EF',
-                        color: m.tipo === 'retirada' || !m.data_devolucao_real
-                          ? '#E30613' : '#1A7A40',
-                      }}>
-                        {m.tipo === 'retirada' || !m.data_devolucao_real ? 'Retirada' : 'Devolução'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#878787', fontSize: 13 }}>
-                      {m.data_retirada
-                        ? new Date(m.data_retirada).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-                        : '–'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {abertos.length > 0 && (
+            <span style={{
+              background: 'rgba(227,6,19,0.08)', color: '#E30613',
+              borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700,
+            }}>
+              {abertos.length} item(ns)
+            </span>
           )}
         </div>
 
-        {/* Quick actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Status overview */}
-          <div style={{
-            background: '#0D0D0D',
-            borderRadius: 14,
-            padding: 24,
-            color: 'white',
-          }}>
-            <div style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontSize: 14, fontWeight: 700, textTransform: 'uppercase',
-              letterSpacing: '0.08em', color: 'rgba(255,255,255,0.4)',
-              marginBottom: 16,
-            }}>Status do Sistema</div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <StatusRow label="API Backend" status="online" />
-              <StatusRow label="Banco de Dados" status="online" />
-              <StatusRow label="Scanner" status="standby" />
-            </div>
-
-            <div style={{
-              marginTop: 20, paddingTop: 20,
-              borderTop: '1px solid rgba(255,255,255,0.08)',
-            }}>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Ocupação</div>
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Em uso</span>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>
-                    {s.total_equipamentos > 0
-                      ? Math.round((s.equipamentos_em_uso / s.total_equipamentos) * 100)
-                      : 0}%
-                  </span>
-                </div>
-                <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: s.total_equipamentos > 0
-                      ? `${(s.equipamentos_em_uso / s.total_equipamentos) * 100}%`
-                      : '0%',
-                    background: '#E30613',
-                    borderRadius: 99,
-                    transition: 'width 0.5s ease',
-                  }} />
-                </div>
-              </div>
-            </div>
+        {abertos.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '56px 20px' }}>
+            <CheckCircle size={40} style={{ color: '#1A9E5C', opacity: 0.4, margin: '0 auto 12px' }} />
+            <p style={{ color: '#aaa', fontSize: 14 }}>Nenhum equipamento fora no momento</p>
           </div>
-
-          {/* Quick actions */}
-          <div style={{
-            background: 'white', borderRadius: 14,
-            border: '1px solid #E8E8E8', padding: 20,
-          }}>
-            <div style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontSize: 14, fontWeight: 700, textTransform: 'uppercase',
-              letterSpacing: '0.08em', color: '#878787',
-              marginBottom: 14,
-            }}>Ações Rápidas</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[
-                { to: '/retirada', label: 'Nova Retirada', icon: '📤', color: '#E30613' },
-                { to: '/devolucao', label: 'Registrar Devolução', icon: '📥', color: '#22C55E' },
-                { to: '/historico', label: 'Ver Histórico', icon: '📋', color: '#3B82F6' },
-              ].map(a => (
-                <Link key={a.to} to={a.to} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 14px', borderRadius: 8,
-                  border: '1.5px solid #F4F4F4',
-                  textDecoration: 'none', color: '#0D0D0D',
-                  fontSize: 14, fontWeight: 600,
-                  transition: 'all 150ms',
-                }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = a.color;
-                    e.currentTarget.style.background = '#FAFAFA';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = '#F4F4F4';
-                    e.currentTarget.style.background = 'white';
-                  }}
-                >
-                  <span style={{ fontSize: 18 }}>{a.icon}</span>
-                  {a.label}
-                  <span style={{ marginLeft: 'auto', color: '#E8E8E8' }}>→</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-      `}</style>
-    </div>
-  );
-}
-
-function KpiCard({ label, value, icon, accent, trend }) {
-  return (
-    <div style={{
-      background: 'white',
-      borderRadius: 14,
-      border: '1px solid #E8E8E8',
-      padding: '22px 22px 18px',
-      position: 'relative',
-      overflow: 'hidden',
-      transition: 'box-shadow 180ms',
-    }}
-      onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'}
-      onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
-    >
-      {/* accent top border */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0,
-        height: 3, background: accent, borderRadius: '14px 14px 0 0',
-      }} />
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 22 }}>{icon}</span>
-        {trend === 'active' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <div style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: accent,
-              animation: 'pulse-dot 1.5s ease infinite',
-            }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ativo</span>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Patrimônio</th>
+                  <th>Tipo</th>
+                  <th>Retirado por</th>
+                  <th>Função</th>
+                  <th>Retirada</th>
+                  <th>Operador</th>
+                  <th>Tempo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {abertos.map(item => {
+                  const horas = Math.floor((Date.now() - new Date(item.data_retirada)) / 3600000);
+                  return (
+                    <tr key={item.item_id}>
+                      <td>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: '#111', background: '#F5F5F5', padding: '2px 8px', borderRadius: 4 }}>
+                          {item.patrimonio}
+                        </span>
+                      </td>
+                      <td style={{ color: '#333', fontWeight: 500 }}>{item.tipo}</td>
+                      <td style={{ color: '#111', fontWeight: 600 }}>{item.pessoa_nome}</td>
+                      <td><span className="badge badge-blue">{item.pessoa_funcao}</span></td>
+                      <td style={{ fontSize: 13 }}>{formatDate(item.data_retirada)}</td>
+                      <td style={{ color: '#aaa', fontSize: 12 }}>{item.operador}</td>
+                      <td>
+                        <span className={`badge ${horas >= 8 ? 'badge-yellow' : 'badge-green'}`}>
+                          <Clock size={10} />
+                          {horasAtras(item.data_retirada)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
-
-      <div style={{
-        fontFamily: "'Barlow Condensed', sans-serif",
-        fontSize: 44, fontWeight: 800,
-        color: '#0D0D0D', lineHeight: 1,
-        letterSpacing: '-0.02em',
-        marginBottom: 6,
-      }}>{value}</div>
-
-      <div style={{ fontSize: 13, color: '#878787', fontWeight: 500 }}>{label}</div>
-    </div>
-  );
-}
-
-function StatusRow({ label, status }) {
-  const colors = { online: '#22C55E', offline: '#E30613', standby: '#F59E0B' };
-  const labels = { online: 'Online', offline: 'Offline', standby: 'Standby' };
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: colors[status] }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: colors[status] }}>{labels[status]}</span>
       </div>
     </div>
   );

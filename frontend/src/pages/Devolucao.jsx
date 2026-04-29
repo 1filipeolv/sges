@@ -1,252 +1,169 @@
 import { useState, useRef, useEffect } from 'react';
-import api from '../api';
+import { api } from '../api';
+import toast from 'react-hot-toast';
+import { Scan, CheckCircle, Clock, User, Package } from 'lucide-react';
 
 export default function Devolucao() {
-  const [scanInput, setScanInput] = useState('');
-  const [itens, setItens] = useState([]);
-  const [mensagem, setMensagem] = useState(null);
+  const [scan, setScan] = useState('');
+  const [resultado, setResultado] = useState(null);
+  const [historico, setHistorico] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const scanRef = useRef(null);
 
-  useEffect(() => {
-    if (scanRef.current) scanRef.current.focus();
-  }, []);
+  useEffect(() => { scanRef.current?.focus(); }, []);
 
   const handleScan = async (e) => {
     e.preventDefault();
-    const patrimonio = scanInput.trim();
-    if (!patrimonio) return;
-    setScanInput('');
-    setMensagem(null);
-
-    if (itens.find(i => i.patrimonio === patrimonio)) {
-      setMensagem({ type: 'warning', text: `Equipamento ${patrimonio} já está na lista.` });
-      return;
-    }
-
+    if (!scan.trim()) return;
+    const patrimonio = scan.trim();
+    setScan('');
     setLoading(true);
     try {
-      const res = await api.get(`/equipamentos/patrimonio/${patrimonio}`);
-      const eq = res.data;
-      if (eq.status !== 'em_uso') {
-        setMensagem({ type: 'error', text: `${eq.nome} (${patrimonio}) não está em uso. Não é possível devolver.` });
-      } else {
-        setItens(prev => [...prev, {
-          id: eq.id,
-          patrimonio: eq.patrimonio,
-          nome: eq.nome,
-          pessoa: eq.pessoa_atual || null,
-          movimentacao_id: eq.movimentacao_id || null,
-        }]);
-        setMensagem({ type: 'success', text: `${eq.nome} adicionado para devolução.` });
-      }
-    } catch {
-      setMensagem({ type: 'error', text: `Patrimônio "${patrimonio}" não encontrado.` });
+      const res = await api(`/movimentacoes/devolucao/${encodeURIComponent(patrimonio)}`, { method: 'POST' });
+      setResultado(res.equipamento);
+      setHistorico(prev => [{ ...res.equipamento, devolvido_em: new Date() }, ...prev.slice(0, 9)]);
+      toast.success(`${res.equipamento?.tipo || patrimonio} devolvido!`);
+    } catch (err) {
+      toast.error(err.message);
     } finally {
       setLoading(false);
-      if (scanRef.current) scanRef.current.focus();
+      scanRef.current?.focus();
     }
   };
 
-  const removeItem = (patrimonio) => {
-    setItens(prev => prev.filter(i => i.patrimonio !== patrimonio));
-  };
-
-  const handleSubmit = async () => {
-    if (itens.length === 0) { setMensagem({ type: 'error', text: 'Adicione pelo menos um equipamento.' }); return; }
-    setSubmitting(true);
-    setMensagem(null);
-    try {
-      await api.post('/movimentacoes/devolucao', {
-        equipamentos: itens.map(i => i.id),
-      });
-      setMensagem({ type: 'success', text: `Devolução registrada com sucesso! ${itens.length} equipamento(s) devolvido(s).` });
-      setItens([]);
-    } catch (err) {
-      setMensagem({ type: 'error', text: err.response?.data?.message || 'Erro ao registrar devolução.' });
-    } finally {
-      setSubmitting(false);
-      if (scanRef.current) scanRef.current.focus();
-    }
+  const formatDate = (d) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 32, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '-0.01em', color: '#0D0D0D', lineHeight: 1 }}>Devolução</div>
-        <div style={{ fontSize: 14, color: '#878787', marginTop: 4 }}>Escaneie os equipamentos a serem devolvidos</div>
+      <div className="page-header">
+        <div>
+          <h1>Devolução de Equipamentos</h1>
+          <p style={{ color: '#888', fontSize: 14, marginTop: 4 }}>Passe o scanner no equipamento para registrar a devolução</p>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 20, maxWidth: 920 }}>
 
+        {/* Coluna esquerda */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
           {/* Scanner */}
-          <div style={{ background: '#0D0D0D', borderRadius: 14, padding: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <div style={{ fontSize: 22 }}>📥</div>
-              <div>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'white' }}>Scanner de Devolução</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Escaneie os equipamentos em uso</div>
-              </div>
+          <div className="card">
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#888', marginBottom: 14 }}>
+              Scanner de devolução
             </div>
-            <form onSubmit={handleScan} style={{ display: 'flex', gap: 10 }}>
+
+            <div style={{
+              background: 'rgba(227,6,19,0.04)',
+              border: '2px dashed rgba(227,6,19,0.2)',
+              borderRadius: 8,
+              padding: '20px 16px',
+              textAlign: 'center',
+              marginBottom: 14,
+            }}>
+              <Scan size={28} style={{ color: '#E30613', opacity: 0.6, margin: '0 auto 8px' }} />
+              <p style={{ fontSize: 12, color: '#888', lineHeight: 1.5 }}>
+                Campo ativo — aponte o scanner<br />no código de barras do equipamento
+              </p>
+            </div>
+
+            <form onSubmit={handleScan} style={{ display: 'flex', gap: 8 }}>
               <input
                 ref={scanRef}
-                value={scanInput}
-                onChange={e => setScanInput(e.target.value)}
-                placeholder="Patrimônio do equipamento..."
+                value={scan}
+                onChange={e => setScan(e.target.value)}
+                placeholder="Aguardando scan..."
                 autoComplete="off"
-                style={{
-                  flex: 1, height: 48, padding: '0 16px',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1.5px solid rgba(255,255,255,0.12)',
-                  borderRadius: 8, fontSize: 15,
-                  fontFamily: "'Barlow', sans-serif",
-                  color: 'white', outline: 'none',
-                  letterSpacing: '0.04em',
-                  transition: 'border-color 180ms',
-                }}
-                onFocus={e => e.target.style.borderColor = '#22C55E'}
-                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+                style={{ flex: 1 }}
               />
-              <button type="submit" disabled={loading} style={{
-                height: 48, padding: '0 24px',
-                background: '#22C55E', color: 'white',
-                border: 'none', borderRadius: 8,
-                fontFamily: "'Barlow', sans-serif",
-                fontWeight: 700, fontSize: 14,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', gap: 8,
-                opacity: loading ? 0.7 : 1,
-                transition: 'all 150ms',
-              }}>
-                {loading ? <Spinner color="#22C55E" /> : '+ Adicionar'}
+              <button type="submit" className="btn btn-success" disabled={loading} style={{ padding: '10px 14px', fontWeight: 700 }}>
+                {loading ? '...' : 'OK'}
               </button>
             </form>
           </div>
 
-          {mensagem && <Alert type={mensagem.type} text={mensagem.text} onClose={() => setMensagem(null)} />}
-
-          {/* List */}
-          <div style={{ background: 'white', borderRadius: 14, border: '1px solid #E8E8E8', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #F4F4F4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Equipamentos para devolução
+          {/* Card do último devolvido */}
+          {resultado && (
+            <div style={{
+              background: '#fff',
+              border: '1.5px solid rgba(26,158,92,0.3)',
+              borderRadius: 10,
+              padding: '18px 20px',
+              boxShadow: '0 2px 12px rgba(26,158,92,0.08)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <div style={{ width: 28, height: 28, background: 'rgba(26,158,92,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CheckCircle size={15} style={{ color: '#1A9E5C' }} />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#1A9E5C' }}>Devolvido com sucesso</span>
               </div>
-              {itens.length > 0 && (
-                <span style={{ background: '#22C55E', color: 'white', fontSize: 12, fontWeight: 700, borderRadius: 99, padding: '2px 10px' }}>{itens.length}</span>
-              )}
+
+              {[
+                ['Patrimônio', <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{resultado.patrimonio}</span>],
+                ['Tipo', resultado.tipo],
+                ['Devolvido por', resultado.pessoa_nome],
+                ['Retirada em', formatDate(resultado.data_retirada)],
+              ].map(([label, val]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #F2F2F2', fontSize: 13 }}>
+                  <span style={{ color: '#888' }}>{label}</span>
+                  <span style={{ color: '#111', fontWeight: 500 }}>{val}</span>
+                </div>
+              ))}
             </div>
+          )}
+        </div>
 
-            {itens.length === 0 ? (
-              <div style={{ padding: '48px 24px', textAlign: 'center', color: '#878787' }}>
-                <div style={{ fontSize: 36, opacity: 0.2, marginBottom: 10 }}>📦</div>
-                <div style={{ fontWeight: 600, color: '#3A3A3A', marginBottom: 4 }}>Nenhum equipamento</div>
-                <div style={{ fontSize: 13 }}>Escaneie ou digite o patrimônio acima</div>
+        {/* Histórico da sessão */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#888' }}>
+                Devoluções desta sessão
               </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            </div>
+            {historico.length > 0 && (
+              <span style={{ background: 'rgba(26,158,92,0.1)', color: '#1A9E5C', borderRadius: 20, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>
+                {historico.length}
+              </span>
+            )}
+          </div>
+
+          {historico.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px 20px', color: '#bbb' }}>
+              <Package size={36} style={{ opacity: 0.25, margin: '0 auto 10px' }} />
+              <p style={{ fontSize: 13 }}>Nenhuma devolução registrada ainda</p>
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table>
                 <thead>
-                  <tr style={{ background: '#FAFAFA' }}>
-                    {['#', 'Patrimônio', 'Equipamento', 'Responsável', ''].map(h => (
-                      <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#878787', borderBottom: '1px solid #F4F4F4' }}>{h}</th>
-                    ))}
+                  <tr>
+                    <th>Patrimônio</th>
+                    <th>Tipo</th>
+                    <th>Devolvido por</th>
+                    <th>Retirada</th>
+                    <th>Devolução</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {itens.map((item, i) => (
-                    <tr key={item.patrimonio} style={{ borderBottom: '1px solid #F9F9F9' }}>
-                      <td style={{ padding: '12px 16px', color: '#878787', fontWeight: 700, fontSize: 13 }}>{i + 1}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ fontFamily: 'monospace', background: '#F4F4F4', padding: '3px 8px', borderRadius: 4, fontSize: 13, fontWeight: 700 }}>{item.patrimonio}</span>
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600 }}>{item.nome}</td>
-                      <td style={{ padding: '12px 16px', color: '#878787', fontSize: 13 }}>{item.pessoa || '–'}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <button onClick={() => removeItem(item.patrimonio)} style={{
-                          background: 'transparent', border: 'none',
-                          color: '#878787', cursor: 'pointer', fontSize: 16,
-                          padding: '4px 8px', borderRadius: 6, transition: 'all 150ms',
-                        }}
-                          onMouseEnter={e => { e.currentTarget.style.background = '#FEE8E8'; e.currentTarget.style.color = '#E30613'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#878787'; }}
-                        >✕</button>
-                      </td>
+                  {historico.map((item, i) => (
+                    <tr key={i}>
+                      <td><span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#111', background: '#F5F5F5', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>{item.patrimonio}</span></td>
+                      <td style={{ fontWeight: 500 }}>{item.tipo}</td>
+                      <td>{item.pessoa_nome}</td>
+                      <td style={{ fontSize: 12, color: '#888' }}>{formatDate(item.data_retirada)}</td>
+                      <td><span className="badge badge-green">{formatDate(item.devolvido_em)}</span></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            )}
-          </div>
-        </div>
-
-        {/* Confirm panel */}
-        <div style={{ background: 'white', borderRadius: 14, border: '1px solid #E8E8E8', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #F4F4F4' }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Confirmar Devolução</div>
-          </div>
-          <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ background: '#F0FDF4', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#878787', marginBottom: 12 }}>Resumo</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <SummaryRow label="Equipamentos" value={itens.length} bold />
-                <SummaryRow label="Data/Hora" value={new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} />
-              </div>
             </div>
-
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || itens.length === 0}
-              style={{
-                height: 48, width: '100%',
-                background: submitting || itens.length === 0 ? '#E8E8E8' : '#22C55E',
-                color: submitting || itens.length === 0 ? '#878787' : 'white',
-                border: 'none', borderRadius: 8,
-                fontFamily: "'Barlow', sans-serif",
-                fontWeight: 700, fontSize: 15,
-                textTransform: 'uppercase', letterSpacing: '0.04em',
-                cursor: submitting || itens.length === 0 ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: 'all 180ms',
-              }}
-            >
-              {submitting ? <><Spinner color="#22C55E" /> Registrando...</> : '✓ Confirmar Devolução'}
-            </button>
-          </div>
+          )}
         </div>
-
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
-}
-
-function SummaryRow({ label, value, bold }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={{ fontSize: 13, color: '#878787' }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: bold ? 700 : 500, color: '#0D0D0D' }}>{value}</span>
-    </div>
-  );
-}
-
-function Alert({ type, text, onClose }) {
-  const styles = {
-    success: { background: '#E8F8EF', color: '#1A7A40', border: '1px solid rgba(26,122,64,0.2)', icon: '✓' },
-    error: { background: '#FEE8E8', color: '#C00', border: '1px solid rgba(227,6,19,0.2)', icon: '✕' },
-    warning: { background: '#FFF3E0', color: '#B35A00', border: '1px solid rgba(179,90,0,0.2)', icon: '⚠' },
-  };
-  const s = styles[type] || styles.error;
-  return (
-    <div style={{ ...s, borderRadius: 8, padding: '12px 16px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span>{s.icon}</span>
-      <span style={{ flex: 1 }}>{text}</span>
-      <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 16, opacity: 0.5 }}>✕</button>
-    </div>
-  );
-}
-
-function Spinner({ color = 'white' }) {
-  return <div style={{ width: 16, height: 16, border: `2px solid rgba(255,255,255,0.3)`, borderTopColor: color === 'white' ? 'white' : 'white', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />;
 }
