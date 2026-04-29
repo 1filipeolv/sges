@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, CalendarDays } from 'lucide-react';
 
-const TIPOS = ['Notebook', 'Chromebook', 'Tablet', 'Celular', 'Projetor', 'Cabo HDMI', 'Carregador', 'Fone de ouvido', 'Câmera', 'Outro'];
+const TIPOS = ['Notebook', 'Chromebook', 'Tablet', 'Celular', 'Projetor', 'Cabo HDMI', 'Carregador', 'Fone de ouvido', 'Câmera', 'Cola', 'Régua', 'Tesoura', 'Outro'];
 
 function Modal({ equipamento, onClose, onSave }) {
-  const [form, setForm] = useState(equipamento || { patrimonio: '', tipo: '', descricao: '' });
+  const [form, setForm] = useState(equipamento || { numero: '', patrimonio: '', tipo: '', descricao: '' });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -33,21 +33,39 @@ function Modal({ equipamento, onClose, onSave }) {
         <form onSubmit={handleSubmit}>
           <div className="form-row cols-2">
             <div className="form-group">
-              <label>Nº Patrimônio *</label>
-              <input required value={form.patrimonio} onChange={e => setForm(f => ({ ...f, patrimonio: e.target.value }))} placeholder="Ex: 001234" style={{ fontFamily: 'monospace' }} />
-            </div>
-            <div className="form-group">
               <label>Tipo *</label>
               <select required value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
                 <option value="">Selecione...</option>
                 {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
+            <div className="form-group">
+              <label>Número <span style={{ color: '#A1A1AA', fontWeight: 400 }}>(ex: 1, 2, 3...)</span></label>
+              <input
+                type="number" min="1"
+                value={form.numero || ''}
+                onChange={e => setForm(f => ({ ...f, numero: e.target.value }))}
+                placeholder="Ex: 1"
+              />
+            </div>
           </div>
-          <div className="form-row">
+          <div className="form-row cols-2">
+            <div className="form-group">
+              <label>Patrimônio <span style={{ color: '#A1A1AA', fontWeight: 400 }}>(opcional)</span></label>
+              <input
+                value={form.patrimonio || ''}
+                onChange={e => setForm(f => ({ ...f, patrimonio: e.target.value }))}
+                placeholder="Ex: 001234"
+                style={{ fontFamily: 'monospace' }}
+              />
+            </div>
             <div className="form-group">
               <label>Descrição</label>
-              <input value={form.descricao || ''} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Dell Inspiron 15, Samsung Galaxy A54..." />
+              <input
+                value={form.descricao || ''}
+                onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
+                placeholder="Ex: Dell Inspiron 15"
+              />
             </div>
           </div>
           <div className="modal-actions">
@@ -58,6 +76,12 @@ function Modal({ equipamento, onClose, onSave }) {
       </div>
     </div>
   );
+}
+
+function nomeEquipamento(eq) {
+  if (eq.numero) return `${eq.tipo} ${eq.numero}`;
+  if (eq.patrimonio) return `${eq.tipo} — ${eq.patrimonio}`;
+  return eq.tipo;
 }
 
 export default function Equipamentos() {
@@ -73,107 +97,93 @@ export default function Equipamentos() {
     if (!confirm('Deletar este equipamento?')) return;
     try {
       await api(`/equipamentos/${id}`, { method: 'DELETE' });
-      toast.success('Equipamento removido');
+      toast.success('Removido');
       carregar();
     } catch (err) { toast.error(err.message); }
   };
 
   const filtrados = equipamentos.filter(e => {
-    const matchTexto = !filtro || e.patrimonio.toLowerCase().includes(filtro.toLowerCase()) || e.tipo.toLowerCase().includes(filtro.toLowerCase()) || (e.descricao || '').toLowerCase().includes(filtro.toLowerCase());
-    const matchStatus = statusFiltro === 'todos' || (statusFiltro === 'disponivel' && e.disponivel) || (statusFiltro === 'fora' && !e.disponivel);
-    return matchTexto && matchStatus;
+    const txt = filtro.toLowerCase();
+    const matchTxt = !filtro ||
+      (e.patrimonio || '').toLowerCase().includes(txt) ||
+      e.tipo.toLowerCase().includes(txt) ||
+      (e.descricao || '').toLowerCase().includes(txt) ||
+      (e.numero ? String(e.numero).includes(txt) : false);
+    const matchStatus = statusFiltro === 'todos' ||
+      (statusFiltro === 'disponivel' && e.disponivel) ||
+      (statusFiltro === 'fora' && !e.disponivel);
+    return matchTxt && matchStatus;
   });
 
   const disponiveis = equipamentos.filter(e => e.disponivel).length;
-  const fora = equipamentos.length - disponiveis;
 
   return (
     <div>
       <div className="page-header">
         <div>
           <h1>Equipamentos</h1>
-          <p style={{ color: '#888', fontSize: 14, marginTop: 4 }}>Patrimônio cadastrado no sistema</p>
+          <p style={{ color: '#71717A', fontSize: 13, marginTop: 3 }}>Patrimônio cadastrado no sistema</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal('new')}>
-          <Plus size={15} /> Novo Equipamento
-        </button>
+        <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={14} /> Novo Equipamento</button>
       </div>
 
-      {/* Contadores */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
-          { label: `${disponiveis} disponíveis`, cls: 'badge-green', val: 'disponivel' },
-          { label: `${fora} fora`, cls: 'badge-red', val: 'fora' },
-          { label: `${equipamentos.length} total`, cls: 'badge-blue', val: 'todos' },
+          { label: `${disponiveis} disponíveis`, val: 'disponivel', color: '#16A34A', bg: 'rgba(22,163,74,0.09)' },
+          { label: `${equipamentos.length - disponiveis} fora`, val: 'fora', color: '#E30613', bg: 'rgba(227,6,19,0.07)' },
+          { label: `${equipamentos.length} total`, val: 'todos', color: '#52525B', bg: '#F0F0F1' },
         ].map(item => (
-          <button
-            key={item.val}
-            onClick={() => setStatusFiltro(item.val)}
-            style={{
-              background: statusFiltro === item.val ? (item.val === 'disponivel' ? 'rgba(26,158,92,0.12)' : item.val === 'fora' ? 'rgba(227,6,19,0.08)' : '#F0F0F0') : '#fff',
-              border: `1.5px solid ${statusFiltro === item.val ? (item.val === 'disponivel' ? 'rgba(26,158,92,0.3)' : item.val === 'fora' ? 'rgba(227,6,19,0.2)' : '#ddd') : '#EBEBEB'}`,
-              borderRadius: 20,
-              padding: '5px 14px',
-              fontSize: 13,
-              fontWeight: 600,
-              color: item.val === 'disponivel' ? '#1A9E5C' : item.val === 'fora' ? '#E30613' : '#555',
-              cursor: 'pointer',
-            }}
-          >
-            {item.label}
-          </button>
+          <button key={item.val} onClick={() => setStatusFiltro(item.val)} style={{
+            background: statusFiltro === item.val ? item.bg : '#fff',
+            border: `1.5px solid ${statusFiltro === item.val ? item.color : '#E4E4E7'}`,
+            borderRadius: 20, padding: '4px 14px', fontSize: 12.5,
+            fontWeight: 600, color: item.color, cursor: 'pointer',
+          }}>{item.label}</button>
         ))}
       </div>
 
       <div className="card">
-        <div style={{ marginBottom: 16 }}>
-          <input
-            placeholder="Buscar por patrimônio, tipo ou descrição..."
-            value={filtro}
-            onChange={e => setFiltro(e.target.value)}
-            style={{ maxWidth: 360 }}
-          />
+        <div style={{ marginBottom: 14 }}>
+          <input placeholder="Buscar por número, patrimônio, tipo ou descrição..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ maxWidth: 380 }} />
         </div>
 
         {filtrados.length === 0 ? (
-          <div className="empty-state">
-            <Package size={40} />
-            <p style={{ marginTop: 8 }}>Nenhum equipamento encontrado</p>
-          </div>
+          <div className="empty-state"><Package size={36} /><p style={{ marginTop: 8 }}>Nenhum equipamento encontrado</p></div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
-                <tr>
-                  <th>Patrimônio</th>
-                  <th>Tipo</th>
-                  <th>Descrição</th>
-                  <th>Status</th>
-                  <th>Retirado por</th>
-                  <th></th>
-                </tr>
+                <tr><th>Equipamento</th><th>Patrimônio</th><th>Descrição</th><th>Status</th><th>Agendado / Retirado por</th><th></th></tr>
               </thead>
               <tbody>
                 {filtrados.map(eq => (
                   <tr key={eq.id}>
+                    <td style={{ fontWeight: 600, color: '#09090B' }}>{nomeEquipamento(eq)}</td>
                     <td>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: '#111', background: '#F5F5F5', padding: '2px 8px', borderRadius: 4 }}>
-                        {eq.patrimonio}
-                      </span>
+                      {eq.patrimonio
+                        ? <span style={{ fontFamily: 'monospace', fontSize: 12, background: '#F4F4F5', padding: '2px 7px', borderRadius: 4 }}>{eq.patrimonio}</span>
+                        : <span style={{ color: '#A1A1AA', fontSize: 12 }}>—</span>
+                      }
                     </td>
-                    <td style={{ fontWeight: 500, color: '#333' }}>{eq.tipo}</td>
-                    <td style={{ fontSize: 13, color: '#888' }}>{eq.descricao || '—'}</td>
+                    <td style={{ fontSize: 13, color: '#71717A' }}>{eq.descricao || '—'}</td>
                     <td>
                       <span className={`badge ${eq.disponivel ? 'badge-green' : 'badge-red'}`}>
                         {eq.disponivel ? 'Disponível' : 'Fora'}
                       </span>
                     </td>
-                    <td style={{ fontSize: 13, color: '#888' }}>{eq.retirado_por || '—'}</td>
+                    <td style={{ fontSize: 12.5 }}>
+                      {eq.agendamento_hoje
+                        ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#D97706' }}><CalendarDays size={13} />{eq.agendamento_hoje.pessoa_nome}</span>
+                        : eq.retirado_por
+                          ? <span style={{ color: '#71717A' }}>{eq.retirado_por}</span>
+                          : <span style={{ color: '#A1A1AA' }}>—</span>
+                      }
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button className="btn btn-ghost" style={{ padding: '6px 10px' }} onClick={() => setModal(eq)}><Pencil size={13} /></button>
+                        <button className="btn btn-ghost" style={{ padding: '5px 9px' }} onClick={() => setModal(eq)}><Pencil size={13} /></button>
                         {eq.disponivel && (
-                          <button className="btn btn-danger" style={{ padding: '6px 10px' }} onClick={() => deletar(eq.id)}><Trash2 size={13} /></button>
+                          <button className="btn btn-danger" style={{ padding: '5px 9px' }} onClick={() => deletar(eq.id)}><Trash2 size={13} /></button>
                         )}
                       </div>
                     </td>
@@ -185,13 +195,7 @@ export default function Equipamentos() {
         )}
       </div>
 
-      {modal && (
-        <Modal
-          equipamento={modal === 'new' ? null : modal}
-          onClose={() => setModal(null)}
-          onSave={() => { setModal(null); carregar(); }}
-        />
-      )}
+      {modal && <Modal equipamento={modal === 'new' ? null : modal} onClose={() => setModal(null)} onSave={() => { setModal(null); carregar(); }} />}
     </div>
   );
 }
