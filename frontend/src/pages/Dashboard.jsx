@@ -5,29 +5,16 @@ import { Package, AlertTriangle, ArrowUpFromLine, CheckCircle, Clock } from 'luc
 function StatCard({ icon: Icon, label, value, color, bg }) {
   return (
     <div style={{
-      background: '#fff',
-      border: '1px solid #EBEBEB',
-      borderRadius: 10,
-      padding: '20px 24px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 16,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10,
+      padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
     }}>
-      <div style={{
-        width: 46, height: 46,
-        borderRadius: 10,
-        background: bg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        <Icon size={20} style={{ color }} />
+      <div style={{ width: 42, height: 42, borderRadius: 9, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon size={18} style={{ color }} />
       </div>
       <div>
-        <div style={{ fontSize: 28, fontFamily: 'Syne', fontWeight: 800, color: '#111', lineHeight: 1 }}>
-          {value ?? '—'}
-        </div>
-        <div style={{ fontSize: 12.5, color: '#888', marginTop: 4 }}>{label}</div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: '#09090B', lineHeight: 1 }}>{value ?? '—'}</div>
+        <div style={{ fontSize: 12, color: '#71717A', marginTop: 3 }}>{label}</div>
       </div>
     </div>
   );
@@ -42,90 +29,54 @@ export default function Dashboard() {
     api('/movimentacoes/abertos').then(setAbertos).catch(() => {});
   }, []);
 
-  const formatDate = (d) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  };
+  const fmt = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
 
   const horasAtras = (d) => {
     const h = Math.floor((Date.now() - new Date(d)) / 3600000);
-    if (h < 1) return 'Agora';
-    if (h === 1) return '1h atrás';
-    return `${h}h atrás`;
+    return h < 1 ? 'Agora' : h === 1 ? '1h atrás' : `${h}h atrás`;
   };
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800 }}>Dashboard</h1>
-        <p style={{ color: '#888', fontSize: 14, marginTop: 4 }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700 }}>Painel de Controle</h1>
+        <p style={{ color: '#71717A', fontSize: 13, marginTop: 3 }}>
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14, marginBottom: 28 }}>
-        <StatCard
-          icon={CheckCircle} label="Disponíveis"
-          value={stats ? stats.total_equipamentos - stats.equipamentos_fora : null}
-          color="#1A9E5C" bg="rgba(26,158,92,0.1)"
-        />
-        <StatCard
-          icon={ArrowUpFromLine} label="Equipamentos fora"
-          value={stats?.equipamentos_fora}
-          color="#E30613" bg="rgba(227,6,19,0.08)"
-        />
-        <StatCard
-          icon={Package} label="Total cadastrado"
-          value={stats?.total_equipamentos}
-          color="#555" bg="#F2F2F2"
-        />
-        <StatCard
-          icon={AlertTriangle} label="Possíveis atrasos (+8h)"
-          value={stats?.possiveis_atrasos}
-          color="#D97700" bg="rgba(217,119,0,0.1)"
-        />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+        <StatCard icon={CheckCircle} label="Disponíveis" value={stats ? stats.total_equipamentos - stats.equipamentos_fora : null} color="#16A34A" bg="rgba(22,163,74,0.09)" />
+        <StatCard icon={ArrowUpFromLine} label="Equipamentos fora" value={stats?.equipamentos_fora} color="#E30613" bg="rgba(227,6,19,0.07)" />
+        <StatCard icon={Package} label="Total cadastrado" value={stats?.total_equipamentos} color="#71717A" bg="#F4F4F5" />
+        <StatCard icon={AlertTriangle} label="Possíveis atrasos (+8h)" value={stats?.possiveis_atrasos} color="#D97706" bg="rgba(217,119,6,0.09)" />
       </div>
 
-      {/* Tabela de abertos */}
-      <div style={{ background: '#fff', border: '1px solid #EBEBEB', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-        <div style={{
-          padding: '18px 24px 14px',
-          borderBottom: '1px solid #EBEBEB',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
+      <div style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h2 style={{ fontSize: 16, fontWeight: 700 }}>Equipamentos fora agora</h2>
-            <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Retiradas em aberto</p>
+            <h2 style={{ fontSize: 15, fontWeight: 600 }}>Equipamentos fora agora</h2>
+            <p style={{ fontSize: 12, color: '#A1A1AA', marginTop: 2 }}>Retiradas em aberto</p>
           </div>
           {abertos.length > 0 && (
-            <span style={{
-              background: 'rgba(227,6,19,0.08)', color: '#E30613',
-              borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700,
-            }}>
-              {abertos.length} item(ns)
+            <span style={{ background: 'rgba(227,6,19,0.07)', color: '#E30613', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>
+              {abertos.length}
             </span>
           )}
         </div>
 
         {abertos.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '56px 20px' }}>
-            <CheckCircle size={40} style={{ color: '#1A9E5C', opacity: 0.4, margin: '0 auto 12px' }} />
-            <p style={{ color: '#aaa', fontSize: 14 }}>Nenhum equipamento fora no momento</p>
+          <div style={{ textAlign: 'center', padding: '52px 20px' }}>
+            <CheckCircle size={36} style={{ color: '#16A34A', opacity: 0.35, margin: '0 auto 10px' }} />
+            <p style={{ color: '#A1A1AA', fontSize: 13 }}>Nenhum equipamento fora no momento</p>
           </div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Patrimônio</th>
-                  <th>Tipo</th>
-                  <th>Retirado por</th>
-                  <th>Função</th>
-                  <th>Retirada</th>
-                  <th>Operador</th>
-                  <th>Tempo</th>
+                  <th>Patrimônio</th><th>Tipo</th><th>Retirado por</th>
+                  <th>Função</th><th>Retirada</th><th>Operador</th><th>Tempo</th>
                 </tr>
               </thead>
               <tbody>
@@ -133,22 +84,13 @@ export default function Dashboard() {
                   const horas = Math.floor((Date.now() - new Date(item.data_retirada)) / 3600000);
                   return (
                     <tr key={item.item_id}>
-                      <td>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: '#111', background: '#F5F5F5', padding: '2px 8px', borderRadius: 4 }}>
-                          {item.patrimonio}
-                        </span>
-                      </td>
-                      <td style={{ color: '#333', fontWeight: 500 }}>{item.tipo}</td>
-                      <td style={{ color: '#111', fontWeight: 600 }}>{item.pessoa_nome}</td>
+                      <td><span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 12, color: '#09090B', background: '#F4F4F5', padding: '2px 7px', borderRadius: 4 }}>{item.patrimonio}</span></td>
+                      <td style={{ fontWeight: 500, color: '#3F3F46' }}>{item.tipo}</td>
+                      <td style={{ fontWeight: 600, color: '#09090B' }}>{item.pessoa_nome}</td>
                       <td><span className="badge badge-blue">{item.pessoa_funcao}</span></td>
-                      <td style={{ fontSize: 13 }}>{formatDate(item.data_retirada)}</td>
-                      <td style={{ color: '#aaa', fontSize: 12 }}>{item.operador}</td>
-                      <td>
-                        <span className={`badge ${horas >= 8 ? 'badge-yellow' : 'badge-green'}`}>
-                          <Clock size={10} />
-                          {horasAtras(item.data_retirada)}
-                        </span>
-                      </td>
+                      <td style={{ fontSize: 12 }}>{fmt(item.data_retirada)}</td>
+                      <td style={{ fontSize: 12, color: '#A1A1AA' }}>{item.operador}</td>
+                      <td><span className={`badge ${horas >= 8 ? 'badge-yellow' : 'badge-green'}`}><Clock size={10} />{horasAtras(item.data_retirada)}</span></td>
                     </tr>
                   );
                 })}
