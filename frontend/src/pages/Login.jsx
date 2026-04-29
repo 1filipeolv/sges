@@ -85,7 +85,7 @@ export default function Login() {
             <span style={{ color: '#fff', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>SGES</span>
           </div>
           <h1 style={{ fontSize: 30, fontWeight: 700, color: '#fff', lineHeight: 1.2, marginBottom: 12 }}>
-            Sistema de Gestão de Equipamentos
+            Sistema de Gestão de Equipamentos SESI
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 1.65, maxWidth: 290 }}>
             Controle de retirada e devolução com registro em tempo real.

@@ -74,7 +74,7 @@ export default function Layout({ children }) {
           </div>
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #F0F0F0' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#E30613', letterSpacing: '0.06em', textTransform: 'uppercase' }}>SGES</span>
-            <div style={{ fontSize: 10.5, color: '#A1A1AA', marginTop: 1 }}>Sistema de Gestão de Equipamentos</div>
+            <div style={{ fontSize: 10.5, color: '#A1A1AA', marginTop: 1 }}>Sistema de Gestão de Equipamentos SESI</div>
           </div>
         </div>
 
