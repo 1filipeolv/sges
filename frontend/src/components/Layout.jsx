@@ -16,10 +16,40 @@ const nav = [
   { to: '/usuarios', icon: ShieldCheck, label: 'Usuários', adminOnly: true },
 ];
 
+function NavItem({ item, user }) {
+  if (item.adminOnly && user?.perfil !== 'ADMIN') return null;
+  if (item.divider) return <div style={{ height: 1, background: '#EBEBEB', margin: '8px 8px' }} />;
+  const Icon = item.icon;
+  return (
+    <NavLink
+      to={item.to}
+      end={item.to === '/'}
+      style={({ isActive }) => ({
+        display: 'flex', alignItems: 'center', gap: 9,
+        padding: '9px 11px',
+        borderRadius: '7px',
+        textDecoration: 'none',
+        fontSize: 13.5,
+        fontWeight: isActive ? 600 : 400,
+        color: isActive ? '#E30613' : '#555',
+        background: isActive ? 'rgba(227,6,19,0.07)' : 'transparent',
+        borderLeft: isActive ? '3px solid #E30613' : '3px solid transparent',
+        transition: 'all 0.12s',
+      })}
+    >
+      {({ isActive }) => (
+        <>
+          <Icon size={15} strokeWidth={isActive ? 2.5 : 2} />
+          {item.label}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
   const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
@@ -53,30 +83,9 @@ export default function Layout({ children }) {
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 1, overflowY: 'auto' }}>
-          {nav.map((item, i) => {
-            if (item.adminOnly && user?.perfil !== 'ADMIN') return null;
-            if (item.divider) return <div key={i} style={{ height: 1, background: '#EBEBEB', margin: '8px 8px' }} />;
-            const Icon = item.icon;
-            return (
-              <NavLink key={item.to} to={item.to} end={item.to === '/'}
-                style={({ isActive }) => ({
-                  display: 'flex', alignItems: 'center', gap: 9,
-                  padding: '9px 11px',
-                  borderRadius: '7px',
-                  textDecoration: 'none',
-                  fontSize: 13.5,
-                  fontWeight: isActive ? 600 : 400,
-                  color: isActive ? '#E30613' : '#555',
-                  background: isActive ? 'rgba(227,6,19,0.07)' : 'transparent',
-                  borderLeft: isActive ? '3px solid #E30613' : '3px solid transparent',
-                  transition: 'all 0.12s',
-                })}
-              >
-                <Icon size={15} strokeWidth={isActive ? 2.5 : 2} />
-                {item.label}
-              </NavLink>
-            );
-          })}
+          {nav.map((item, i) => (
+            <NavItem key={item.to || i} item={item} user={user} />
+          ))}
         </nav>
 
         {/* User */}
