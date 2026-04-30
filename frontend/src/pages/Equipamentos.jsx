@@ -3,8 +3,6 @@ import { api } from '../api';
 import toast from 'react-hot-toast';
 import { Plus, Pencil, Trash2, Package, CalendarDays } from 'lucide-react';
 
-const TIPOS = ['Notebook', 'Chromebook', 'Tablet', 'Celular', 'Projetor', 'Cabo HDMI', 'Carregador', 'Fone de ouvido', 'Câmera', 'Cola', 'Régua', 'Tesoura', 'Outro'];
-
 function Modal({ equipamento, onClose, onSave }) {
   const [form, setForm] = useState(equipamento || { numero: '', patrimonio: '', tipo: '', descricao: '' });
   const [loading, setLoading] = useState(false);
@@ -34,38 +32,21 @@ function Modal({ equipamento, onClose, onSave }) {
           <div className="form-row cols-2">
             <div className="form-group">
               <label>Tipo *</label>
-              <select required value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
-                <option value="">Selecione...</option>
-                {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <input required value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))} placeholder="Ex: Notebook, Projetor..." />
             </div>
             <div className="form-group">
-              <label>Número <span style={{ color: '#A1A1AA', fontWeight: 400 }}>(ex: 1, 2, 3...)</span></label>
-              <input
-                type="number" min="1"
-                value={form.numero || ''}
-                onChange={e => setForm(f => ({ ...f, numero: e.target.value }))}
-                placeholder="Ex: 1"
-              />
+              <label>Número <span style={{ color: '#A1A1AA', fontWeight: 400 }}>(opcional)</span></label>
+              <input type="number" min="1" value={form.numero || ''} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} placeholder="Ex: 1" />
             </div>
           </div>
           <div className="form-row cols-2">
             <div className="form-group">
               <label>Patrimônio <span style={{ color: '#A1A1AA', fontWeight: 400 }}>(opcional)</span></label>
-              <input
-                value={form.patrimonio || ''}
-                onChange={e => setForm(f => ({ ...f, patrimonio: e.target.value }))}
-                placeholder="Ex: 001234"
-                style={{ fontFamily: 'monospace' }}
-              />
+              <input value={form.patrimonio || ''} onChange={e => setForm(f => ({ ...f, patrimonio: e.target.value }))} placeholder="Ex: 001234" style={{ fontFamily: 'monospace' }} />
             </div>
             <div className="form-group">
               <label>Descrição</label>
-              <input
-                value={form.descricao || ''}
-                onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-                placeholder="Ex: Dell Inspiron 15"
-              />
+              <input value={form.descricao || ''} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Dell Inspiron 15" />
             </div>
           </div>
           <div className="modal-actions">
@@ -78,11 +59,7 @@ function Modal({ equipamento, onClose, onSave }) {
   );
 }
 
-function nomeEquipamento(eq) {
-  if (eq.numero) return `${eq.tipo} ${eq.numero}`;
-  if (eq.patrimonio) return `${eq.tipo} — ${eq.patrimonio}`;
-  return eq.tipo;
-}
+const nomeEq = (eq) => eq.numero ? `${eq.tipo} ${eq.numero}` : eq.patrimonio ? `${eq.tipo} — ${eq.patrimonio}` : eq.tipo;
 
 export default function Equipamentos() {
   const [equipamentos, setEquipamentos] = useState([]);
@@ -127,7 +104,7 @@ export default function Equipamentos() {
         <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={14} /> Novo Equipamento</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {[
           { label: `${disponiveis} disponíveis`, val: 'disponivel', color: '#16A34A', bg: 'rgba(22,163,74,0.09)' },
           { label: `${equipamentos.length - disponiveis} fora`, val: 'fora', color: '#E30613', bg: 'rgba(227,6,19,0.07)' },
@@ -146,7 +123,6 @@ export default function Equipamentos() {
         <div style={{ marginBottom: 14 }}>
           <input placeholder="Buscar por número, patrimônio, tipo ou descrição..." value={filtro} onChange={e => setFiltro(e.target.value)} style={{ maxWidth: 380 }} />
         </div>
-
         {filtrados.length === 0 ? (
           <div className="empty-state"><Package size={36} /><p style={{ marginTop: 8 }}>Nenhum equipamento encontrado</p></div>
         ) : (
@@ -158,33 +134,20 @@ export default function Equipamentos() {
               <tbody>
                 {filtrados.map(eq => (
                   <tr key={eq.id}>
-                    <td style={{ fontWeight: 600, color: '#09090B' }}>{nomeEquipamento(eq)}</td>
-                    <td>
-                      {eq.patrimonio
-                        ? <span style={{ fontFamily: 'monospace', fontSize: 12, background: '#F4F4F5', padding: '2px 7px', borderRadius: 4 }}>{eq.patrimonio}</span>
-                        : <span style={{ color: '#A1A1AA', fontSize: 12 }}>—</span>
-                      }
-                    </td>
+                    <td style={{ fontWeight: 600, color: '#09090B' }}>{nomeEq(eq)}</td>
+                    <td>{eq.patrimonio ? <span style={{ fontFamily: 'monospace', fontSize: 12, background: '#F4F4F5', padding: '2px 7px', borderRadius: 4 }}>{eq.patrimonio}</span> : <span style={{ color: '#A1A1AA' }}>—</span>}</td>
                     <td style={{ fontSize: 13, color: '#71717A' }}>{eq.descricao || '—'}</td>
-                    <td>
-                      <span className={`badge ${eq.disponivel ? 'badge-green' : 'badge-red'}`}>
-                        {eq.disponivel ? 'Disponível' : 'Fora'}
-                      </span>
-                    </td>
+                    <td><span className={`badge ${eq.disponivel ? 'badge-green' : 'badge-red'}`}>{eq.disponivel ? 'Disponível' : 'Fora'}</span></td>
                     <td style={{ fontSize: 12.5 }}>
                       {eq.agendamento_hoje
                         ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#D97706' }}><CalendarDays size={13} />{eq.agendamento_hoje.pessoa_nome}</span>
-                        : eq.retirado_por
-                          ? <span style={{ color: '#71717A' }}>{eq.retirado_por}</span>
-                          : <span style={{ color: '#A1A1AA' }}>—</span>
-                      }
+                        : eq.retirado_por ? <span style={{ color: '#71717A' }}>{eq.retirado_por}</span>
+                        : <span style={{ color: '#A1A1AA' }}>—</span>}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                         <button className="btn btn-ghost" style={{ padding: '5px 9px' }} onClick={() => setModal(eq)}><Pencil size={13} /></button>
-                        {eq.disponivel && (
-                          <button className="btn btn-danger" style={{ padding: '5px 9px' }} onClick={() => deletar(eq.id)}><Trash2 size={13} /></button>
-                        )}
+                        {eq.disponivel && <button className="btn btn-danger" style={{ padding: '5px 9px' }} onClick={() => deletar(eq.id)}><Trash2 size={13} /></button>}
                       </div>
                     </td>
                   </tr>

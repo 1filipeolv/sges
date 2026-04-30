@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Package, AlertTriangle, ArrowUpFromLine, CheckCircle, Clock } from 'lucide-react';
+import { Package, AlertTriangle, ArrowUpFromLine, CheckCircle, Clock, CalendarDays } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, color, bg }) {
   return (
@@ -36,6 +36,8 @@ export default function Dashboard() {
     return h < 1 ? 'Agora' : h === 1 ? '1h atrás' : `${h}h atrás`;
   };
 
+  const nomeEq = (item) => item.numero ? `${item.tipo} ${item.numero}` : item.tipo;
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -49,7 +51,7 @@ export default function Dashboard() {
         <StatCard icon={CheckCircle} label="Disponíveis" value={stats ? stats.total_equipamentos - stats.equipamentos_fora : null} color="#16A34A" bg="rgba(22,163,74,0.09)" />
         <StatCard icon={ArrowUpFromLine} label="Equipamentos fora" value={stats?.equipamentos_fora} color="#E30613" bg="rgba(227,6,19,0.07)" />
         <StatCard icon={Package} label="Total cadastrado" value={stats?.total_equipamentos} color="#71717A" bg="#F4F4F5" />
-        <StatCard icon={AlertTriangle} label="Possíveis atrasos (+8h)" value={stats?.possiveis_atrasos} color="#D97706" bg="rgba(217,119,6,0.09)" />
+        <StatCard icon={CalendarDays} label="Agendamentos hoje" value={stats?.agendamentos_hoje} color="#D97706" bg="rgba(217,119,6,0.09)" />
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
@@ -75,25 +77,26 @@ export default function Dashboard() {
             <table>
               <thead>
                 <tr>
-                  <th>Patrimônio</th><th>Tipo</th><th>Retirado por</th>
+                  <th>Equipamento</th><th>Patrimônio</th><th>Retirado por</th>
                   <th>Função</th><th>Retirada</th><th>Operador</th><th>Tempo</th>
                 </tr>
               </thead>
               <tbody>
-                {abertos.map(item => {
-                  const horas = Math.floor((Date.now() - new Date(item.data_retirada)) / 3600000);
-                  return (
-                    <tr key={item.item_id}>
-                      <td><span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 12, color: '#09090B', background: '#F4F4F5', padding: '2px 7px', borderRadius: 4 }}>{item.patrimonio}</span></td>
-                      <td style={{ fontWeight: 500, color: '#3F3F46' }}>{item.tipo}</td>
-                      <td style={{ fontWeight: 600, color: '#09090B' }}>{item.pessoa_nome}</td>
-                      <td><span className="badge badge-blue">{item.pessoa_funcao}</span></td>
-                      <td style={{ fontSize: 12 }}>{fmt(item.data_retirada)}</td>
-                      <td style={{ fontSize: 12, color: '#A1A1AA' }}>{item.operador}</td>
-                      <td><span className={`badge ${horas >= 8 ? 'badge-yellow' : 'badge-green'}`}><Clock size={10} />{horasAtras(item.data_retirada)}</span></td>
-                    </tr>
-                  );
-                })}
+                {abertos.map(item => (
+                  <tr key={item.item_id}>
+                    <td style={{ fontWeight: 600, color: '#09090B' }}>{nomeEq(item)}</td>
+                    <td>
+                      {item.patrimonio
+                        ? <span style={{ fontFamily: 'monospace', fontSize: 12, background: '#F4F4F5', padding: '2px 7px', borderRadius: 4 }}>{item.patrimonio}</span>
+                        : <span style={{ color: '#A1A1AA' }}>—</span>}
+                    </td>
+                    <td style={{ fontWeight: 600, color: '#09090B' }}>{item.pessoa_nome}</td>
+                    <td><span className="badge badge-blue">{item.pessoa_funcao}</span></td>
+                    <td style={{ fontSize: 12 }}>{fmt(item.data_retirada)}</td>
+                    <td style={{ fontSize: 12, color: '#A1A1AA' }}>{item.operador}</td>
+                    <td><span className="badge badge-green"><Clock size={10} />{horasAtras(item.data_retirada)}</span></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
