@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, ArrowUpFromLine, ArrowDownToLine,
-  Users, Package, History, LogOut, ShieldCheck, CalendarDays, RefreshCw
+  Users, Package, History, LogOut, ShieldCheck, CalendarDays, RefreshCw, FileDown
 } from 'lucide-react';
 
 const nav = [
@@ -11,6 +11,7 @@ const nav = [
   { to: '/devolucao', icon: ArrowDownToLine, label: 'Devolução' },
   { to: '/troca', icon: RefreshCw, label: 'Troca' },
   { to: '/historico', icon: History, label: 'Histórico' },
+  { to: '/relatorios', icon: FileDown, label: 'Relatórios' },
   { divider: true, adminOnly: true },
   { to: '/agendamentos', icon: CalendarDays, label: 'Agendamentos', adminOnly: true },
   { to: '/pessoas', icon: Users, label: 'Pessoas', adminOnly: true },

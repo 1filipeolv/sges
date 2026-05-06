@@ -12,6 +12,7 @@ app.use('/api/pessoas',       require('./routes/pessoas'));
 app.use('/api/equipamentos',  require('./routes/equipamentos'));
 app.use('/api/movimentacoes', require('./routes/movimentacoes'));
 app.use('/api/agendamentos',  require('./routes/agendamentos'));
+app.use('/api/relatorios',    require('./routes/relatorios'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

@@ -8,6 +8,7 @@ import Retirada from './pages/Retirada';
 import Devolucao from './pages/Devolucao';
 import Troca from './pages/Troca';
 import Historico from './pages/Historico';
+import Relatorios from './pages/Relatorios';
 import Pessoas from './pages/Pessoas';
 import Equipamentos from './pages/Equipamentos';
 import Usuarios from './pages/Usuarios';
@@ -32,6 +33,7 @@ function AppRoutes() {
       <Route path="/devolucao" element={<ProtectedRoute><Devolucao /></ProtectedRoute>} />
       <Route path="/troca" element={<ProtectedRoute><Troca /></ProtectedRoute>} />
       <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
+      <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
       <Route path="/agendamentos" element={<ProtectedRoute adminOnly><Agendamentos /></ProtectedRoute>} />
       <Route path="/pessoas" element={<ProtectedRoute adminOnly><Pessoas /></ProtectedRoute>} />
       <Route path="/equipamentos" element={<ProtectedRoute adminOnly><Equipamentos /></ProtectedRoute>} />
