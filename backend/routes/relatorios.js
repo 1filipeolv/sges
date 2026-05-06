@@ -106,7 +106,7 @@ router.get('/excel', auth, async (req, res) => {
       r.height = 22;
       r.eachCell(cell => {
         cell.font = { size: 11 };
-        cell.alignment = { vertical: 'middle' };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
         if (i % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } };
       });
     });
@@ -153,7 +153,7 @@ router.get('/excel', auth, async (req, res) => {
       r.height = 22;
       r.eachCell(cell => {
         cell.font = { size: 11 };
-        cell.alignment = { vertical: 'middle' };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
         if (i % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } };
       });
     });
@@ -177,7 +177,7 @@ router.get('/excel', auth, async (req, res) => {
       r.height = 22;
       r.eachCell(cell => {
         cell.font = { size: 11 };
-        cell.alignment = { vertical: 'middle' };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
         if (i % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } };
       });
     });
