@@ -62,22 +62,22 @@ router.get('/excel', auth, async (req, res) => {
     // Cabeçalho estilizado
     ws1.mergeCells('A1:I1');
     ws1.getCell('A1').value = `SGES — Relatório de Movimentações | ${de} a ${ate}`;
-    ws1.getCell('A1').font = { bold: true, size: 13, color: { argb: 'FFFFFFFF' } };
+    ws1.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
     ws1.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE30613' } };
     ws1.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
-    ws1.getRow(1).height = 28;
+    ws1.getRow(1).height = 40;
 
     ws1.addRow([]);
 
     const cols1 = ['Equipamento', 'Número', 'Patrimônio', 'Descrição', 'Pessoa', 'Função', 'Retirada', 'Devolução', 'Duração (min)'];
     const headerRow1 = ws1.addRow(cols1);
     headerRow1.eachCell(cell => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A1A2E' } };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
       cell.border = { bottom: { style: 'thin', color: { argb: 'FFE30613' } } };
     });
-    ws1.getRow(3).height = 20;
+    ws1.getRow(3).height = 26;
 
     const fmtDate = (d) => d ? new Date(d).toLocaleString('pt-BR') : '—';
 
@@ -94,60 +94,87 @@ router.get('/excel', auth, async (req, res) => {
         fmtDate(row.data_devolucao),
         row.duracao_minutos !== null ? Number(row.duracao_minutos) : 'Em uso',
       ]);
+      r.height = 22;
       r.eachCell(cell => {
+        cell.font = { size: 11 };
         cell.alignment = { vertical: 'middle' };
         if (i % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } };
       });
     });
 
+    // Colunas mais largas — principal mudança
     ws1.columns = [
-      { width: 20 }, { width: 10 }, { width: 14 }, { width: 22 },
-      { width: 24 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 14 },
+      { width: 28 }, { width: 14 }, { width: 18 }, { width: 32 },
+      { width: 32 }, { width: 24 }, { width: 22 }, { width: 22 }, { width: 18 },
     ];
 
     // Totais
     ws1.addRow([]);
     const totalRow = ws1.addRow([`Total de registros: ${movResult.rows.length}`, '', '', '', '', '', '', '', '']);
-    totalRow.getCell(1).font = { bold: true };
+    totalRow.getCell(1).font = { bold: true, size: 12 };
+    totalRow.height = 22;
 
     // === ABA 2: Resumo ===
     const ws2 = wb.addWorksheet('Resumo');
 
     ws2.mergeCells('A1:D1');
     ws2.getCell('A1').value = `SGES — Resumo do Período | ${de} a ${ate}`;
-    ws2.getCell('A1').font = { bold: true, size: 13, color: { argb: 'FFFFFFFF' } };
+    ws2.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
     ws2.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE30613' } };
     ws2.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
-    ws2.getRow(1).height = 28;
+    ws2.getRow(1).height = 40;
 
     ws2.addRow([]);
 
     // Equipamentos mais usados
-    ws2.addRow(['EQUIPAMENTOS MAIS USADOS']).getCell(1).font = { bold: true, size: 11 };
+    const secEq = ws2.addRow(['EQUIPAMENTOS MAIS USADOS']);
+    secEq.getCell(1).font = { bold: true, size: 13 };
+    secEq.height = 24;
+
     const hEq = ws2.addRow(['Equipamento', 'Patrimônio', 'Total de Retiradas']);
+    hEq.height = 24;
     hEq.eachCell(cell => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF555555' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
     });
-    topEq.rows.forEach(row => {
+    topEq.rows.forEach((row, i) => {
       const nomeEq = row.numero ? `${row.tipo} ${row.numero}` : row.tipo;
-      ws2.addRow([nomeEq, row.patrimonio || '—', Number(row.total)]);
+      const r = ws2.addRow([nomeEq, row.patrimonio || '—', Number(row.total)]);
+      r.height = 22;
+      r.eachCell(cell => {
+        cell.font = { size: 11 };
+        cell.alignment = { vertical: 'middle' };
+        if (i % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } };
+      });
     });
 
     ws2.addRow([]);
 
     // Pessoas que mais retiraram
-    ws2.addRow(['PESSOAS QUE MAIS RETIRARAM']).getCell(1).font = { bold: true, size: 11 };
+    const secP = ws2.addRow(['PESSOAS QUE MAIS RETIRARAM']);
+    secP.getCell(1).font = { bold: true, size: 13 };
+    secP.height = 24;
+
     const hP = ws2.addRow(['Nome', 'Função', 'Total de Retiradas']);
+    hP.height = 24;
     hP.eachCell(cell => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF555555' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
     });
-    topPessoas.rows.forEach(row => {
-      ws2.addRow([row.nome, row.funcao, Number(row.total)]);
+    topPessoas.rows.forEach((row, i) => {
+      const r = ws2.addRow([row.nome, row.funcao, Number(row.total)]);
+      r.height = 22;
+      r.eachCell(cell => {
+        cell.font = { size: 11 };
+        cell.alignment = { vertical: 'middle' };
+        if (i % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } };
+      });
     });
 
-    ws2.columns = [{ width: 26 }, { width: 18 }, { width: 20 }, { width: 14 }];
+    // Colunas mais largas — aba Resumo
+    ws2.columns = [{ width: 34 }, { width: 24 }, { width: 22 }, { width: 16 }];
 
     // Enviar arquivo
     const filename = `SGES_Relatorio_${de}_${ate}.xlsx`;
