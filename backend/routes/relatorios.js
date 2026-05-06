@@ -20,9 +20,9 @@ router.get('/excel', auth, async (req, res) => {
         p.nome as pessoa_nome, p.funcao as pessoa_funcao,
         m.data_retirada, me.data_devolucao,
         CASE WHEN me.data_devolucao IS NOT NULL
-          THEN ROUND(EXTRACT(EPOCH FROM (me.data_devolucao - m.data_retirada))/60)
+          THEN ROUND(EXTRACT(EPOCH FROM (me.data_devolucao - m.data_retirada)))
           ELSE NULL
-        END as duracao_minutos
+        END as duracao_segundos
       FROM movimentacao_equipamentos me
       JOIN movimentacoes m ON m.id = me.movimentacao_id
       JOIN equipamentos e ON e.id = me.equipamento_id
@@ -69,7 +69,7 @@ router.get('/excel', auth, async (req, res) => {
 
     ws1.addRow([]);
 
-    const cols1 = ['Equipamento', 'Número', 'Patrimônio', 'Descrição', 'Pessoa', 'Função', 'Retirada', 'Devolução', 'Duração (min)'];
+    const cols1 = ['Equipamento', 'Número', 'Patrimônio', 'Descrição', 'Pessoa', 'Função', 'Retirada', 'Devolução', 'Duração'];
     const headerRow1 = ws1.addRow(cols1);
     headerRow1.eachCell(cell => {
       cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
@@ -80,6 +80,15 @@ router.get('/excel', auth, async (req, res) => {
     ws1.getRow(3).height = 26;
 
     const fmtDate = (d) => d ? new Date(d).toLocaleString('pt-BR') : '—';
+
+    const fmtDuracao = (segundos) => {
+      if (segundos === null || segundos === undefined) return 'Em uso';
+      const s = Number(segundos);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      return `${h}h ${String(m).padStart(2, '0')}min ${String(sec).padStart(2, '0')}s`;
+    };
 
     movResult.rows.forEach((row, i) => {
       const nomeEq = row.numero ? `${row.tipo} ${row.numero}` : row.tipo;
@@ -92,7 +101,7 @@ router.get('/excel', auth, async (req, res) => {
         row.pessoa_funcao,
         fmtDate(row.data_retirada),
         fmtDate(row.data_devolucao),
-        row.duracao_minutos !== null ? Number(row.duracao_minutos) : 'Em uso',
+        fmtDuracao(row.duracao_segundos),
       ]);
       r.height = 22;
       r.eachCell(cell => {
