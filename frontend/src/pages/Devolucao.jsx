@@ -1,165 +1,220 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
-import { Scan, CheckCircle, Clock, User, Package } from 'lucide-react';
+import { Scan, CheckCircle, Clock } from 'lucide-react';
+
+const nomeEq = (item) => item.numero ? `${item.tipo} ${item.numero}` : item.tipo;
+const fmt = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const horasAtras = (d) => {
+  const h = Math.floor((Date.now() - new Date(d)) / 3600000);
+  return h < 1 ? 'Agora' : h === 1 ? '1h' : `${h}h atrás`;
+};
 
 export default function Devolucao() {
+  const [abertos, setAbertos] = useState([]);
+  const [selecionados, setSelecionados] = useState([]);
   const [scan, setScan] = useState('');
-  const [resultado, setResultado] = useState(null);
-  const [historico, setHistorico] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [confirmados, setConfirmados] = useState([]);
+  const [busca, setBusca] = useState('');
   const scanRef = useRef(null);
 
-  useEffect(() => { scanRef.current?.focus(); }, []);
+  const carregar = () => api('/movimentacoes/abertos').then(setAbertos).catch(() => {});
+  useEffect(() => { carregar(); scanRef.current?.focus(); }, []);
+
+  const toggle = (id) => setSelecionados(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+
+  const filtrar = (item) => {
+    if (!busca) return true;
+    const txt = busca.toLowerCase();
+    return nomeEq(item).toLowerCase().includes(txt) ||
+      (item.patrimonio || '').toLowerCase().includes(txt) ||
+      item.pessoa_nome.toLowerCase().includes(txt);
+  };
+
+  const toggleAll = () => {
+    const filtrados = abertos.filter(filtrar);
+    const todos = filtrados.every(e => selecionados.includes(e.item_id));
+    if (todos) setSelecionados(prev => prev.filter(id => !filtrados.find(e => e.item_id === id)));
+    else {
+      const novos = filtrados.map(e => e.item_id).filter(id => !selecionados.includes(id));
+      setSelecionados(prev => [...prev, ...novos]);
+    }
+  };
 
   const handleScan = async (e) => {
     e.preventDefault();
     if (!scan.trim()) return;
     const patrimonio = scan.trim();
     setScan('');
-    setLoading(true);
-    try {
-      const res = await api(`/movimentacoes/devolucao/${encodeURIComponent(patrimonio)}`, { method: 'POST' });
-      setResultado(res.equipamento);
-      setHistorico(prev => [{ ...res.equipamento, devolvido_em: new Date() }, ...prev.slice(0, 9)]);
-      toast.success(`${res.equipamento?.tipo || patrimonio} devolvido!`);
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-      scanRef.current?.focus();
-    }
+    const item = abertos.find(a => a.patrimonio === patrimonio);
+    if (!item) { toast.error('Equipamento não encontrado ou já devolvido'); scanRef.current?.focus(); return; }
+    if (selecionados.includes(item.item_id)) { toast.error('Já selecionado'); scanRef.current?.focus(); return; }
+    setSelecionados(prev => [...prev, item.item_id]);
+    toast.success(`${nomeEq(item)} selecionado`);
+    scanRef.current?.focus();
   };
 
-  const formatDate = (d) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const confirmar = async () => {
+    if (selecionados.length === 0) { toast.error('Selecione ao menos um equipamento'); return; }
+    setLoading(true);
+    const itens = abertos.filter(a => selecionados.includes(a.item_id));
+    const sucesso = [];
+    const erros = [];
+
+    for (const item of itens) {
+      try {
+        await api(`/movimentacoes/devolucao/${encodeURIComponent(item.patrimonio)}`, { method: 'POST' });
+        sucesso.push(item);
+      } catch (err) {
+        erros.push(`${nomeEq(item)}: ${err.message}`);
+      }
+    }
+
+    if (sucesso.length > 0) {
+      setConfirmados(prev => [...sucesso.map(s => ({ ...s, devolvido_em: new Date() })), ...prev]);
+      toast.success(`${sucesso.length} equipamento(s) devolvido(s)!`);
+    }
+    erros.forEach(e => toast.error(e));
+    setSelecionados([]);
+    await carregar();
+    setLoading(false);
   };
+
+  const filtrados = abertos.filter(filtrar);
+  const todosChecked = filtrados.length > 0 && filtrados.every(e => selecionados.includes(e.item_id));
 
   return (
     <div>
       <div className="page-header">
         <div>
           <h1>Devolução de Equipamentos</h1>
-          <p style={{ color: '#888', fontSize: 14, marginTop: 4 }}>Passe o scanner no equipamento para registrar a devolução</p>
+          <p style={{ color: '#71717A', fontSize: 13, marginTop: 3 }}>Selecione os equipamentos que estão voltando</p>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 20, maxWidth: 920 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, maxWidth: 980 }}>
 
-        {/* Coluna esquerda */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* Scanner */}
           <div className="card">
-            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#888', marginBottom: 14 }}>
-              Scanner de devolução
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#A1A1AA', marginBottom: 10 }}>
+              Scanner (opcional)
             </div>
-
             <div style={{
-              background: 'rgba(227,6,19,0.04)',
-              border: '2px dashed rgba(227,6,19,0.2)',
-              borderRadius: 8,
-              padding: '20px 16px',
-              textAlign: 'center',
-              marginBottom: 14,
+              background: 'rgba(227,6,19,0.04)', border: '2px dashed rgba(227,6,19,0.2)',
+              borderRadius: 7, padding: '14px', textAlign: 'center', marginBottom: 10,
             }}>
-              <Scan size={28} style={{ color: '#E30613', opacity: 0.6, margin: '0 auto 8px' }} />
-              <p style={{ fontSize: 12, color: '#888', lineHeight: 1.5 }}>
-                Campo ativo — aponte o scanner<br />no código de barras do equipamento
-              </p>
+              <Scan size={22} style={{ color: '#E30613', opacity: 0.5, margin: '0 auto 6px' }} />
+              <p style={{ fontSize: 11.5, color: '#A1A1AA' }}>Aponte o scanner para selecionar</p>
             </div>
-
             <form onSubmit={handleScan} style={{ display: 'flex', gap: 8 }}>
-              <input
-                ref={scanRef}
-                value={scan}
-                onChange={e => setScan(e.target.value)}
-                placeholder="Aguardando scan..."
-                autoComplete="off"
-                style={{ flex: 1 }}
-              />
-              <button type="submit" className="btn btn-success" disabled={loading} style={{ padding: '10px 14px', fontWeight: 700 }}>
-                {loading ? '...' : 'OK'}
-              </button>
+              <input ref={scanRef} value={scan} onChange={e => setScan(e.target.value)}
+                placeholder="Aguardando scan..." autoComplete="off" style={{ flex: 1, fontSize: 13 }} />
+              <button type="submit" className="btn btn-success" style={{ padding: '8px 12px', fontWeight: 700 }}>OK</button>
             </form>
           </div>
 
-          {/* Card do último devolvido */}
-          {resultado && (
-            <div style={{
-              background: '#fff',
-              border: '1.5px solid rgba(26,158,92,0.3)',
-              borderRadius: 10,
-              padding: '18px 20px',
-              boxShadow: '0 2px 12px rgba(26,158,92,0.08)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <div style={{ width: 28, height: 28, background: 'rgba(26,158,92,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <CheckCircle size={15} style={{ color: '#1A9E5C' }} />
-                </div>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#1A9E5C' }}>Devolvido com sucesso</span>
+          {selecionados.length > 0 && (
+            <div className="card">
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#A1A1AA', marginBottom: 10 }}>
+                Devolvendo ({selecionados.length})
               </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
+                {selecionados.map(id => {
+                  const item = abertos.find(a => a.item_id === id);
+                  if (!item) return null;
+                  return (
+                    <div key={id} style={{ padding: '6px 10px', background: 'rgba(22,163,74,0.07)', borderRadius: 6, fontSize: 12.5 }}>
+                      <div style={{ fontWeight: 600 }}>{nomeEq(item)}</div>
+                      <div style={{ fontSize: 11, color: '#71717A' }}>{item.pessoa_nome}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button className="btn btn-success" onClick={confirmar} disabled={loading}
+                style={{ width: '100%', justifyContent: 'center', padding: '11px', fontSize: 13.5 }}>
+                <CheckCircle size={15} />
+                {loading ? 'Registrando...' : `Confirmar Devolução (${selecionados.length})`}
+              </button>
+            </div>
+          )}
 
-              {[
-                ['Patrimônio', <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{resultado.patrimonio}</span>],
-                ['Tipo', resultado.tipo],
-                ['Devolvido por', resultado.pessoa_nome],
-                ['Retirada em', formatDate(resultado.data_retirada)],
-              ].map(([label, val]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #F2F2F2', fontSize: 13 }}>
-                  <span style={{ color: '#888' }}>{label}</span>
-                  <span style={{ color: '#111', fontWeight: 500 }}>{val}</span>
-                </div>
-              ))}
+          {confirmados.length > 0 && (
+            <div className="card">
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#A1A1AA', marginBottom: 10 }}>
+                Devolvidos agora ({confirmados.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {confirmados.map((item, i) => (
+                  <div key={i} style={{ padding: '6px 10px', background: '#F4F4F5', borderRadius: 6 }}>
+                    <div style={{ fontWeight: 600, fontSize: 12.5 }}>{nomeEq(item)}</div>
+                    <div style={{ fontSize: 11, color: '#A1A1AA' }}>{item.pessoa_nome} • {fmt(item.devolvido_em)}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Histórico da sessão */}
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#888' }}>
-                Devoluções desta sessão
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#A1A1AA' }}>
+              Equipamentos fora ({abertos.length})
             </div>
-            {historico.length > 0 && (
-              <span style={{ background: 'rgba(26,158,92,0.1)', color: '#1A9E5C', borderRadius: 20, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>
-                {historico.length}
-              </span>
+            {filtrados.length > 0 && (
+              <button onClick={toggleAll} style={{ fontSize: 12, color: '#E30613', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                {todosChecked ? 'Desmarcar todos' : 'Selecionar todos'}
+              </button>
             )}
           </div>
 
-          {historico.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '50px 20px', color: '#bbb' }}>
-              <Package size={36} style={{ opacity: 0.25, margin: '0 auto 10px' }} />
-              <p style={{ fontSize: 13 }}>Nenhuma devolução registrada ainda</p>
+          <input placeholder="Buscar por equipamento, patrimônio ou pessoa..." value={busca}
+            onChange={e => setBusca(e.target.value)} style={{ marginBottom: 12, fontSize: 13 }} />
+
+          {filtrados.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#A1A1AA' }}>
+              <CheckCircle size={32} style={{ color: '#16A34A', opacity: 0.35, margin: '0 auto 8px' }} />
+              <p style={{ fontSize: 13 }}>Nenhum equipamento fora no momento</p>
             </div>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Patrimônio</th>
-                    <th>Tipo</th>
-                    <th>Devolvido por</th>
-                    <th>Retirada</th>
-                    <th>Devolução</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historico.map((item, i) => (
-                    <tr key={i}>
-                      <td><span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#111', background: '#F5F5F5', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>{item.patrimonio}</span></td>
-                      <td style={{ fontWeight: 500 }}>{item.tipo}</td>
-                      <td>{item.pessoa_nome}</td>
-                      <td style={{ fontSize: 12, color: '#888' }}>{formatDate(item.data_retirada)}</td>
-                      <td><span className="badge badge-green">{formatDate(item.devolvido_em)}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 520, overflowY: 'auto' }}>
+              {filtrados.map(item => {
+                const checked = selecionados.includes(item.item_id);
+                const horas = Math.floor((Date.now() - new Date(item.data_retirada)) / 3600000);
+                return (
+                  <div key={item.item_id} onClick={() => toggle(item.item_id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
+                    border: `1.5px solid ${checked ? '#16A34A' : '#E4E4E7'}`,
+                    background: checked ? 'rgba(22,163,74,0.04)' : '#fff',
+                    transition: 'all 0.12s',
+                  }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                      border: `2px solid ${checked ? '#16A34A' : '#D4D4D8'}`,
+                      background: checked ? '#16A34A' : '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13.5, color: '#09090B' }}>{nomeEq(item)}</div>
+                      <div style={{ fontSize: 12, color: '#71717A', marginTop: 2 }}>
+                        <strong style={{ color: '#09090B' }}>{item.pessoa_nome}</strong>
+                        <span style={{ color: '#A1A1AA' }}> — {item.pessoa_funcao}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 2 }}>
+                        {item.patrimonio ? <span style={{ fontFamily: 'monospace' }}>{item.patrimonio} • </span> : ''}
+                        Retirada: {fmt(item.data_retirada)}
+                      </div>
+                    </div>
+                    <span className={`badge ${horas >= 8 ? 'badge-yellow' : 'badge-blue'}`} style={{ fontSize: 11, flexShrink: 0 }}>
+                      <Clock size={10} />{horasAtras(item.data_retirada)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
