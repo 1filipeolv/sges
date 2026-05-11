@@ -42,6 +42,7 @@ export default function Devolucao() {
     }
   };
 
+  // Scanner — busca por patrimônio e seleciona o item
   const handleScan = async (e) => {
     e.preventDefault();
     if (!scan.trim()) return;
@@ -55,6 +56,7 @@ export default function Devolucao() {
     scanRef.current?.focus();
   };
 
+  // Devolução usa item_id — funciona com ou sem patrimônio
   const confirmar = async () => {
     if (selecionados.length === 0) { toast.error('Selecione ao menos um equipamento'); return; }
     setLoading(true);
@@ -64,7 +66,7 @@ export default function Devolucao() {
 
     for (const item of itens) {
       try {
-        await api(`/movimentacoes/devolucao/${encodeURIComponent(item.patrimonio)}`, { method: 'POST' });
+        await api(`/movimentacoes/devolucao/item/${item.item_id}`, { method: 'POST' });
         sucesso.push(item);
       } catch (err) {
         erros.push(`${nomeEq(item)}: ${err.message}`);
@@ -205,7 +207,9 @@ export default function Devolucao() {
                         <span style={{ color: '#A1A1AA' }}> — {item.pessoa_funcao}</span>
                       </div>
                       <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 2 }}>
-                        {item.patrimonio ? <span style={{ fontFamily: 'monospace' }}>{item.patrimonio} • </span> : ''}
+                        {item.patrimonio
+                          ? <span style={{ fontFamily: 'monospace' }}>{item.patrimonio} • </span>
+                          : <span>Sem patrimônio • </span>}
                         Retirada: {fmt(item.data_retirada)}
                       </div>
                     </div>

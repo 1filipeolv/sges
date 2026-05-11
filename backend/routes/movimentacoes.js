@@ -12,13 +12,13 @@ router.get('/stats', auth, async (req, res) => {
       SELECT COUNT(DISTINCT me.id) FROM movimentacao_equipamentos me
       JOIN movimentacoes m ON m.id=me.movimentacao_id
       WHERE me.data_devolucao IS NULL AND m.data_retirada < NOW() - INTERVAL '8 hours'`);
-    const agend     = await pool.query(`SELECT COUNT(*) FROM agendamentos WHERE data=CURRENT_DATE`);
+    const agend = await pool.query(`SELECT COUNT(*) FROM agendamentos WHERE data=CURRENT_DATE`);
     res.json({
-      equipamentos_fora:   parseInt(fora.rows[0].count),
-      total_equipamentos:  parseInt(total.rows[0].count),
-      retiradas_abertas:   parseInt(pendentes.rows[0].count),
-      possiveis_atrasos:   parseInt(atrasados.rows[0].count),
-      agendamentos_hoje:   parseInt(agend.rows[0].count),
+      equipamentos_fora:  parseInt(fora.rows[0].count),
+      total_equipamentos: parseInt(total.rows[0].count),
+      retiradas_abertas:  parseInt(pendentes.rows[0].count),
+      possiveis_atrasos:  parseInt(atrasados.rows[0].count),
+      agendamentos_hoje:  parseInt(agend.rows[0].count),
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -26,7 +26,8 @@ router.get('/stats', auth, async (req, res) => {
 router.get('/abertos', auth, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT me.id as item_id, e.patrimonio, e.tipo, e.descricao, e.numero,
+      SELECT me.id as item_id, e.id as equipamento_id,
+        e.patrimonio, e.tipo, e.descricao, e.numero,
         p.nome as pessoa_nome, p.funcao as pessoa_funcao,
         m.id as movimentacao_id, m.data_retirada, u.nome as operador
       FROM movimentacao_equipamentos me
@@ -48,7 +49,7 @@ router.post('/retirada', auth, async (req, res) => {
     for (const eqId of equipamentos_ids) {
       const eq = await client.query('SELECT patrimonio, disponivel FROM equipamentos WHERE id=$1', [eqId]);
       if (!eq.rows[0]) throw new Error(`Equipamento ID ${eqId} não encontrado`);
-      if (!eq.rows[0].disponivel) throw new Error(`${eq.rows[0].patrimonio || eqId} já está fora`);
+      if (!eq.rows[0].disponivel) throw new Error(`${eq.rows[0].patrimonio || 'Equipamento'} já está fora`);
       const agend = await client.query(
         `SELECT a.id, p.nome FROM agendamentos a JOIN pessoas p ON p.id=a.pessoa_id
          WHERE a.equipamento_id=$1 AND a.data=CURRENT_DATE AND a.pessoa_id!=$2`,
@@ -73,6 +74,35 @@ router.post('/retirada', auth, async (req, res) => {
   } finally { client.release(); }
 });
 
+// Devolução por item_id (não depende de patrimônio)
+router.post('/devolucao/item/:item_id', auth, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const item = await client.query(
+      'SELECT me.*, e.id as eq_id FROM movimentacao_equipamentos me JOIN equipamentos e ON e.id=me.equipamento_id WHERE me.id=$1 AND me.data_devolucao IS NULL',
+      [req.params.item_id]
+    );
+    if (!item.rows[0]) throw new Error('Item não encontrado ou já devolvido');
+    const now = new Date();
+    const eqId = item.rows[0].eq_id;
+    await client.query('UPDATE movimentacao_equipamentos SET data_devolucao=$1 WHERE id=$2', [now, item.rows[0].id]);
+    await client.query('UPDATE equipamentos SET disponivel=TRUE WHERE id=$1', [eqId]);
+    await client.query(`
+      UPDATE movimentacoes SET data_devolucao=$1
+      WHERE id=$2 AND NOT EXISTS (
+        SELECT 1 FROM movimentacao_equipamentos me2
+        WHERE me2.movimentacao_id=$2 AND me2.data_devolucao IS NULL
+      )`, [now, item.rows[0].movimentacao_id]);
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: err.message });
+  } finally { client.release(); }
+});
+
+// Devolução por patrimônio (scanner)
 router.post('/devolucao/:patrimonio', auth, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -82,7 +112,7 @@ router.post('/devolucao/:patrimonio', auth, async (req, res) => {
     if (eq.rows[0].disponivel) throw new Error('Equipamento já está disponível');
     const eqId = eq.rows[0].id;
     const item = await client.query(
-      'SELECT me.id FROM movimentacao_equipamentos me WHERE me.equipamento_id=$1 AND me.data_devolucao IS NULL LIMIT 1',
+      'SELECT me.id, me.movimentacao_id FROM movimentacao_equipamentos me WHERE me.equipamento_id=$1 AND me.data_devolucao IS NULL LIMIT 1',
       [eqId]
     );
     if (!item.rows[0]) throw new Error('Nenhuma retirada em aberto');
@@ -91,12 +121,10 @@ router.post('/devolucao/:patrimonio', auth, async (req, res) => {
     await client.query('UPDATE equipamentos SET disponivel=TRUE WHERE id=$1', [eqId]);
     await client.query(`
       UPDATE movimentacoes SET data_devolucao=$1
-      WHERE id=(
-        SELECT m.id FROM movimentacoes m
-        JOIN movimentacao_equipamentos me ON me.movimentacao_id=m.id
-        WHERE me.equipamento_id=$2 AND m.data_devolucao IS NULL
-        AND NOT EXISTS (SELECT 1 FROM movimentacao_equipamentos me2 WHERE me2.movimentacao_id=m.id AND me2.data_devolucao IS NULL)
-        LIMIT 1)`, [now, eqId]);
+      WHERE id=$2 AND NOT EXISTS (
+        SELECT 1 FROM movimentacao_equipamentos me2
+        WHERE me2.movimentacao_id=$2 AND me2.data_devolucao IS NULL
+      )`, [now, item.rows[0].movimentacao_id]);
     await client.query('COMMIT');
     const info = await pool.query(`
       SELECT e.patrimonio, e.tipo, e.descricao, e.numero, p.nome as pessoa_nome, m.data_retirada
