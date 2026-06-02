@@ -1,0 +1,25 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente
+.env
+
+# Logs
+*.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos do Vite
+frontend/.vite
+
+# PM2
+.pm2
+
+# Cobertura de testes
+coverage/
+
+# Arquivos temporários
+tmp/
+temp/cl

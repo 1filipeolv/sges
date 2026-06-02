@@ -1,9 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const { initDB } = require('./db');
 
 const app = express();
+
 app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
 app.use(express.json());
 
@@ -16,7 +18,22 @@ app.use('/api/relatorios',    require('./routes/relatorios'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+// Servir React
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
 const PORT = process.env.PORT || 3001;
-initDB().then(() => {
-  app.listen(PORT, () => console.log(`🚀 Porta ${PORT}`));
-}).catch(err => { console.error(err); process.exit(1); });
+
+initDB()
+  .then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Porta ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
